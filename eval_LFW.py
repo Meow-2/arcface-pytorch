@@ -7,12 +7,12 @@ from utils.utils_metrics import test
 
 
 if __name__ == "__main__":
-    #--------------------------------------#
+    # --------------------------------------#
     #   是否使用Cuda
     #   没有GPU可以设置成False
-    #--------------------------------------#
-    cuda            = True
-    #--------------------------------------#
+    # --------------------------------------#
+    cuda = True
+    # --------------------------------------#
     #   主干特征提取网络的选择
     #   mobilefacenet
     #   mobilenetv1
@@ -21,31 +21,33 @@ if __name__ == "__main__":
     #   iresnet50
     #   iresnet100
     #   iresnet200
-    #--------------------------------------#
-    backbone        = "mobilefacenet"
-    #--------------------------------------#
+    # --------------------------------------#
+    backbone = "mobilefacenet"
+    # --------------------------------------#
     #   输入图像大小
-    #--------------------------------------#
-    input_shape     = [112, 112, 3]
-    #--------------------------------------#
+    # --------------------------------------#
+    input_shape = [112, 112, 3]
+    # --------------------------------------#
     #   训练好的权值文件
-    #--------------------------------------#
-    model_path      = "model_data/arcface_mobilefacenet.pth"
-    #--------------------------------------#
+    # --------------------------------------#
+    model_path = "./logs/logs6/ep100-loss0.007-val_loss1.250.pth"
+    # model_path = "./logs/logs6/ep096-loss0.007-val_loss1.227.pth"
+    # model_path = "model_data/arcface_mobilefacenet.pth"
+    # --------------------------------------#
     #   LFW评估数据集的文件路径
     #   以及对应的txt文件
-    #--------------------------------------#
-    lfw_dir_path    = "lfw"
-    lfw_pairs_path  = "model_data/lfw_pair.txt"
-    #--------------------------------------#
+    # --------------------------------------#
+    lfw_dir_path = "datasets/SCface/sc2_6"
+    lfw_pairs_path = "model_data/SCface_pair.txt"
+    # --------------------------------------#
     #   评估的批次大小和记录间隔
-    #--------------------------------------#
-    batch_size      = 256
-    log_interval    = 1
-    #--------------------------------------#
+    # --------------------------------------#
+    batch_size = 1
+    log_interval = 1
+    # --------------------------------------#
     #   ROC图的保存路径
-    #--------------------------------------#
-    png_save_path   = "model_data/roc_test.png"
+    # --------------------------------------#
+    png_save_path = "model_data/roc_test.png"
 
     test_loader = torch.utils.data.DataLoader(
         LFWDataset(dir=lfw_dir_path, pairs_path=lfw_pairs_path, image_size=input_shape), batch_size=batch_size, shuffle=False)
@@ -54,8 +56,9 @@ if __name__ == "__main__":
 
     print('Loading weights into state dict...')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model.load_state_dict(torch.load(model_path, map_location=device), strict=False)
-    model  = model.eval()
+    model.load_state_dict(torch.load(
+        model_path, map_location=device), strict=False)
+    model = model.eval()
 
     if cuda:
         model = torch.nn.DataParallel(model)
