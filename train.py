@@ -128,6 +128,7 @@ if __name__ == "__main__":
     #   weight_decay    权值衰减，可防止过拟合
     #                   adam会导致weight_decay错误，使用adam时建议设置为0。
     # ------------------------------------------------------------------#
+    # 学习器的参数
     optimizer_type = "sgd"
     momentum = 0.9
     weight_decay = 5e-4
@@ -197,6 +198,7 @@ if __name__ == "__main__":
         # ------------------------------------------------------#
         model_dict = model.state_dict()
         pretrained_dict = torch.load(model_path, map_location=device)
+        # 先把所有能载入的key都放进 temp_dict 里
         load_key, no_load_key, temp_dict = [], [], {}
         for k, v in pretrained_dict.items():
             if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
@@ -204,7 +206,7 @@ if __name__ == "__main__":
                 load_key.append(k)
             else:
                 no_load_key.append(k)
-        model_dict.update(temp_dict)
+        model_dict.update(temp_dict)  # 如果 key 已经存在, 則会被更新为新的值
         model.load_state_dict(model_dict)
         # ------------------------------------------------------#
         #   显示没有匹配上的Key
@@ -229,13 +231,14 @@ if __name__ == "__main__":
     #   torch 1.2不支持amp，建议使用torch 1.7.1及以上正确使用fp16
     #   因此torch1.2这里显示"could not be resolve"
     # ------------------------------------------------------------------#
+    # 这里不知道是干嘛的
     if fp16:
         from torch.cuda.amp import GradScaler as GradScaler
         scaler = GradScaler()
     else:
         scaler = None
 
-    model_train = model.train()
+    model_train = model.train()  # return self
     # ----------------------------#
     #   多卡同步Bn
     # ----------------------------#
@@ -255,27 +258,34 @@ if __name__ == "__main__":
                 model_train, device_ids=[local_rank], find_unused_parameters=True)
         else:
             model_train = torch.nn.DataParallel(model)
-            cudnn.benchmark = True
-            model_train = model_train.cuda()
+            cudnn.benchmark = True  # 如果输入的尺寸一致, 可以用来加速
+            model_train = model_train.cuda()  # 把模型放到 gpu 上
 
     # ---------------------------------#
     #   LFW估计
     # ---------------------------------#
+    # def __getitem__():
+    #   return image1, image2, issame
     LFW_loader = torch.utils.data.DataLoader(
         LFWDataset(dir=lfw_dir_path, pairs_path=lfw_pairs_path, image_size=input_shape), batch_size=32, shuffle=False) if lfw_eval_flag else None
 
     # -------------------------------------------------------#
     #   0.01用于验证，0.99用于训练
     # -------------------------------------------------------#
+    # 可以考虑设成 0
     val_split = 0.01
+    # 读入 cls_train.txt
     with open(annotation_path, "r") as f:
         lines = f.readlines()
+    # 随机打乱
     np.random.seed(10101)
     np.random.shuffle(lines)
     np.random.seed(None)
+
     num_val = int(len(lines)*val_split)
     num_train = len(lines) - num_val
 
+    # 打印所有的键值对
     show_config(
         num_classes=num_classes, backbone=backbone, model_path=model_path, input_shape=input_shape,
         Init_Epoch=Init_Epoch, Epoch=Epoch, batch_size=batch_size,
@@ -288,8 +298,11 @@ if __name__ == "__main__":
         #   判断当前batch_size，自适应调整学习率
         # -------------------------------------------------------------------#
         nbs = 64
-        lr_limit_max = 1e-3 if optimizer_type == 'adam' else 1e-1
-        lr_limit_min = 3e-4 if optimizer_type == 'adam' else 5e-4
+        lr_limit_max = 1e-3 if optimizer_type == 'adam' else 1e-1  # 1e-1
+        lr_limit_min = 3e-4 if optimizer_type == 'adam' else 5e-4  # 5e-4
+        # Init_lr = 1e-2
+        # Min_lr = Init_lr * 0.01
+        # 根据 batch_size, 调整学习率
         Init_lr_fit = min(max(batch_size / nbs * Init_lr,
                           lr_limit_min), lr_limit_max)
         Min_lr_fit = min(max(batch_size / nbs * Min_lr,
@@ -312,15 +325,19 @@ if __name__ == "__main__":
         # ---------------------------------------#
         #   判断每一个世代的长度
         # ---------------------------------------#
-        epoch_step = num_train // batch_size
-        epoch_step_val = num_val // batch_size
+        epoch_step = num_train // batch_size  # 整数除法, 返回商的整数部分
+        epoch_step_val = num_val // batch_size  # 整数除法, 返回商的整数部分
 
+        # 至少有一个 batch_size 张图片
         if epoch_step == 0 or epoch_step_val == 0:
             raise ValueError("数据集过小，无法继续进行训练，请扩充数据集。")
 
         # ---------------------------------------#
         #   构建数据集加载器。
         # ---------------------------------------#
+        # num_val = int(len(lines)*val_split)
+        # num_train = len(lines) - num_val
+        # lines[:num_train] :num_train 是左闭右开区间
         train_dataset = FacenetDataset(
             input_shape, lines[:num_train], random=True)
         val_dataset = FacenetDataset(
@@ -338,6 +355,17 @@ if __name__ == "__main__":
             val_sampler = None
             shuffle = True
 
+# dataset (Dataset): 要加载的数据集
+# batch_size (int, optional): 每个batch中的样本数(默认: 1)。
+# shuffle (bool, optional): 每个epoch是否打乱样本顺序(默认: False)。
+# sampler (Sampler, optional): 这个参数可以在训练时指定对样本抽样的策略。这可以用于不打乱数据的情况下，让每一个epoch使用一个新的子集。
+# batch_sampler (Sampler, optional): 与batch_size和shuffle参数互斥。可以手动指定每个batch中样本的索引。
+# num_workers (int, optional): 读取数据的进程数(默认: 0)。
+# collate_fn (callable, optional): 合并batch的函数，默认为default_collate。
+# pin_memory (bool, optional): 如果为True，将会在返回之前将数据复制到CUDA固定内存中(默认: False)。
+# drop_last (bool, optional): 如果为True，则当样本数不能被batch_size整除时，丢弃最后一个不完整的batch(默认: False)。
+
+        # sampler = None
         gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
                          drop_last=True, collate_fn=dataset_collate, sampler=train_sampler)
         gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
@@ -347,8 +375,10 @@ if __name__ == "__main__":
             if distributed:
                 train_sampler.set_epoch(epoch)
 
+            # 根据当前的 epoch 设置学习率
             set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
 
+            # 跑一个 epoch
             fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen,
                           gen_val, Epoch, Cuda, LFW_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank)
 

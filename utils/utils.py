@@ -19,10 +19,13 @@ def cvtColor(image):
 #   对输入图像进行resize
 # ---------------------------------------------------#
 
+# size 是一个列表
+
 
 def resize_image(image, size, letterbox_image):
     iw, ih = image.size
     w, h = size
+    # 用灰度图填充
     if letterbox_image:
         scale = min(w/iw, h/ih)
         nw = int(iw*scale)

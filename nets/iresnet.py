@@ -211,11 +211,11 @@ class IResNet(nn.Module):
         x = self.layer4(x)  # (64, 512, 7, 7) , 两个残差模块
         x = self.bn2(x)
         # 从第二维开始平坦化, 也就是从第二维开始拉平
-        x = torch.flatten(x, 1)
+        x = torch.flatten(x, 1)  # (64, 512x7x7)
         # 随机 dropout
-        x = self.dropout(x)
-        x = self.fc(x)
-        x = self.features(x)
+        x = self.dropout(x)  # (64, 512x7x7)
+        x = self.fc(x)  # (64, 512)
+        x = self.features(x)  # (64, 512)
         return x
 
 

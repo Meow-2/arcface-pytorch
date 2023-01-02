@@ -10,6 +10,8 @@ from nets.iresnet import (iresnet18, iresnet34, iresnet50, iresnet100,
 from nets.mobilefacenet import get_mbf
 from nets.mobilenet import get_mobilenet
 
+#self.head = Arcface_Head(embedding_size=embedding_size, num_classes=num_classes, s=s)
+
 
 class Arcface_Head(Module):
     def __init__(self, embedding_size=128, num_classes=10575, s=64., m=0.5):
@@ -93,9 +95,9 @@ class Arcface(nn.Module):
                 embedding_size=embedding_size, num_classes=num_classes, s=s)
 
     def forward(self, x, y=None, mode="predict"):
-        x = self.arcface(x)
-        x = x.view(x.size()[0], -1)
-        x = F.normalize(x)
+        x = self.arcface(x)  # 返回一个一维的向量  (64, 512)
+        x = x.view(x.size()[0], -1)  # 拉成一维
+        x = F.normalize(x)  # 标准化
         if mode == "predict":
             return x
         else:
