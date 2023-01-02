@@ -266,6 +266,7 @@ if __name__ == "__main__":
     # ---------------------------------#
     # def __getitem__():
     #   return image1, image2, issame
+    # drop_last = False
     LFW_loader = torch.utils.data.DataLoader(
         LFWDataset(dir=lfw_dir_path, pairs_path=lfw_pairs_path, image_size=input_shape), batch_size=32, shuffle=False) if lfw_eval_flag else None
 

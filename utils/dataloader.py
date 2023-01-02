@@ -136,6 +136,7 @@ class LFWDataset(datasets.ImageFolder):
         image1, image2 = np.transpose(preprocess_input(np.array(image1, np.float32)), [
                                       2, 0, 1]), np.transpose(preprocess_input(np.array(image2, np.float32)), [2, 0, 1])
 
+        # 返回的 numpy
         return image1, image2, issame
 
     # 返回测试集长度

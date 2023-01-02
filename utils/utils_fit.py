@@ -129,20 +129,26 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
         labels, distances = [], []
         for _, (data_a, data_p, label) in enumerate(test_loader):
             with torch.no_grad():
+                # 转换图片 tensor 类型为 float, 并放进 CUDA
                 data_a, data_p = data_a.type(
                     torch.FloatTensor), data_p.type(torch.FloatTensor)
                 if cuda:
                     data_a, data_p = data_a.cuda(
                         local_rank), data_p.cuda(local_rank)
 
+                # 在验证的时候, 没有 Arcface-Head
                 out_a, out_p = model_train(data_a), model_train(data_p)
+                # 欧式距离, 逐元素平方, torch.sum(x,1)带表对第一维求和, output 维度 (32, 1)
                 dists = torch.sqrt(torch.sum((out_a - out_p) ** 2, 1))
+            # append 的是 (32,1) 的值
             distances.append(dists.data.cpu().numpy())
+            # append 的是 (32,1) 的值
             labels.append(label.data.cpu().numpy())
-
+        # 用来将2维列表转化为一维列表, 并传入 np.array 来进行初始化
         labels = np.array([sublabel for label in labels for sublabel in label])
         distances = np.array(
             [subdist for dist in distances for subdist in dist])
+        # 一维列表进行评估
         _, _, accuracy, val, val_std, far, best_thresholds = evaluate(
             distances, labels)
 
