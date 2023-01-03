@@ -18,15 +18,19 @@ class Arcface_Head(Module):
         super(Arcface_Head, self).__init__()
         self.s = s
         self.m = m
+        # torch.FloatTensor(), 创建一个浮点数数组 (num_classes, embedding_size)
+        # Parameter对象作为模型的一部分的时候, 可以被自动求导
         self.weight = Parameter(torch.FloatTensor(num_classes, embedding_size))
+        # 使用了 Xavier 均匀分布来随机初始化权重, 有助于网络更快地收敛，并且可以在训练过程中较少地出现梯度消失或爆炸的问题
         nn.init.xavier_uniform_(self.weight)
 
-        self.cos_m = math.cos(m)
-        self.sin_m = math.sin(m)
-        self.th = math.cos(math.pi - m)
-        self.mm = math.sin(math.pi - m) * m
+        self.cos_m = math.cos(m)    # 固定值
+        self.sin_m = math.sin(m)    # 固定值
+        self.th = math.cos(math.pi - m)     # 固定值
+        self.mm = math.sin(math.pi - m) * m  # 固定值
 
     def forward(self, input, label):
+        # 在计算图之外进行运算, y = F.linear(x,A,b)
         cosine = F.linear(input, F.normalize(self.weight))
         sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
         phi = cosine * self.cos_m - sine * self.sin_m
@@ -97,6 +101,7 @@ class Arcface(nn.Module):
     def forward(self, x, y=None, mode="predict"):
         x = self.arcface(x)  # 返回一个一维的向量  (64, 512)
         x = x.view(x.size()[0], -1)  # 拉成一维
+        # 在计算图之外进行标准化
         x = F.normalize(x)  # 标准化
         if mode == "predict":
             return x

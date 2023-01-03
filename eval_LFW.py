@@ -32,11 +32,14 @@ if __name__ == "__main__":
     # --------------------------------------#
     # model_path = "./logs/logs6/ep100-loss0.007-val_loss1.250.pth"
     # model_path = "./logs/logs6/ep096-loss0.007-val_loss1.227.pth"
-    model_path = "model_data/arcface_mobilefacenet.pth"
+    model_path = "./logs/logs7/ep100-loss0.008-val_loss13.744.pth"
+    # model_path = "model_data/arcface_mobilefacenet.pth"
     # --------------------------------------#
     #   LFW评估数据集的文件路径
     #   以及对应的txt文件
     # --------------------------------------#
+    # lfw_dir_path = "datasets/lfw"
+    # lfw_pairs_path = "model_data/lfw_pair.txt"
     lfw_dir_path = "datasets/SCface/sc2_6"
     lfw_pairs_path = "model_data/SCface_pair.txt"
     # --------------------------------------#

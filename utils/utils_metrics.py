@@ -10,6 +10,15 @@ from tqdm import tqdm
 # 在训练集上, 在每个阈值下计算 Acc, 取 Acc 最高作为最佳阈值
 # 然后用该阈值, 计算测试集上的 Acc, 作为该折的 Acc
 
+# 分成 10 折, train:test = 9:1, 最终返回的是10个测试集上的 Validation Rate 的均值、方差和 Far 的均值
+# 在训练集上, 选取 FAR = 0.001 的阈值, 放在测试集上, 取得测试集的 Val 和 Far
+# 每个折取均值
+
+# tpr,fpr 用来画 ROC 曲线 (400)
+# accuracy 是准确率评价指标 (10)
+# val 是每个折上的均值
+# val_std 是每个折上的标准差
+# far 是每个折上的均值
 def evaluate(distances, labels, nrof_folds=10):
     # Calculate evaluation metrics
     thresholds = np.arange(0, 4, 0.01)
@@ -22,8 +31,9 @@ def evaluate(distances, labels, nrof_folds=10):
     # Calculate evaluation metrics
     thresholds = np.arange(0, 4, 0.001)
     val, val_std, far = calculate_val(thresholds, distances,
-                                      labels, 1e-3, nrof_folds=nrof_folds)
+                                      labels, 1e-2, nrof_folds=nrof_folds)
     return tpr, fpr, accuracy, val, val_std, far, best_thresholds
+    #     (400),(400), (10),   (1),   (1),   (1),  (1)
 
 
 def calculate_roc(thresholds, distances, labels, nrof_folds=10):
@@ -95,10 +105,13 @@ def calculate_accuracy(threshold, dist, actual_issame):
 
 
 def calculate_val(thresholds, distances, labels, far_target=1e-3, nrof_folds=10):
+    # pair 的数量
     nrof_pairs = min(len(labels), len(distances))
+    # 阈值的数量
     nrof_thresholds = len(thresholds)
     k_fold = KFold(n_splits=nrof_folds, shuffle=False)
 
+    # (10)
     val = np.zeros(nrof_folds)
     far = np.zeros(nrof_folds)
 
@@ -107,31 +120,44 @@ def calculate_val(thresholds, distances, labels, far_target=1e-3, nrof_folds=10)
     for fold_idx, (train_set, test_set) in enumerate(k_fold.split(indices)):
         # Find the threshold that gives FAR = far_target
         far_train = np.zeros(nrof_thresholds)
+        # 遍历阈值, 计算每个阈值下的 val 和 far
         for threshold_idx, threshold in enumerate(thresholds):
             _, far_train[threshold_idx] = calculate_val_far(
                 threshold, distances[train_set], labels[train_set])
+        # 绘制函数
         if np.max(far_train) >= far_target:
             # 这里有问题, 还不清楚是什么问题
+            # 一维插值函数, 将 far_train 映射到每个阈值
+            # far_train 到 thresholds 有一个映射关系
             f = interpolate.interp1d(far_train, thresholds, kind='slinear')
+            # 选取 far_target = 0.001 对应的阈值
             threshold = f(far_target)
         else:
             threshold = 0.0
 
+        # 计算这个阈值下, 这个 fold 的 val 和 far
         val[fold_idx], far[fold_idx] = calculate_val_far(
             threshold, distances[test_set], labels[test_set])
 
+    # 每个 fold 的平均值
     val_mean = np.mean(val)
     far_mean = np.mean(far)
     val_std = np.std(val)
-    return val_mean, val_std, far_mean
+    return val_mean, val_std, far_mean  # far 的均值
 
 
 def calculate_val_far(threshold, dist, actual_issame):
+    # np.less(x1,x2) 对两个数组中对应位置的元素进行比较, 如果 x1 中的元素小于 x2 的元素, 则返回 True
+    # 所有的距离与阈值比较
     predict_issame = np.less(dist, threshold)
+    # tp
     true_accept = np.sum(np.logical_and(predict_issame, actual_issame))
+    # fp
     false_accept = np.sum(np.logical_and(
         predict_issame, np.logical_not(actual_issame)))
+    # tp + fn
     n_same = np.sum(actual_issame)
+    # tn + fp
     n_diff = np.sum(np.logical_not(actual_issame))
     if n_diff == 0:
         n_diff = 1
