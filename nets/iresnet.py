@@ -214,6 +214,7 @@ class IResNet(nn.Module):
         x = torch.flatten(x, 1)  # (64, 512x7x7)
         # 随机 dropout
         x = self.dropout(x)  # (64, 512x7x7)
+        # 全连接 + BN
         x = self.fc(x)  # (64, 512)
         x = self.features(x)  # (64, 512)
         return x

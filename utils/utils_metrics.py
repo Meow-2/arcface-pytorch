@@ -210,8 +210,9 @@ def test(test_loader, model, png_save_path, log_interval, batch_size, cuda):
     tpr, fpr, accuracy, val, val_std, far, best_thresholds = evaluate(
         distances, labels)
     print('Accuracy: %2.5f+-%2.5f' % (np.mean(accuracy), np.std(accuracy)))
-    print('Best_thresholds: %2.5f' % best_thresholds)
-    print('Validation rate: %2.5f+-%2.5f @ FAR=%2.5f' % (val, val_std, far))
+    # print('Best_thresholds: %2.5f' % best_thresholds)
+    # print('Validation rate: %2.5f+-%2.5f @ FAR=%2.5f' % (val, val_std, far))
+    print('Validation rate: %2.5f+-%2.5f @ FAR=%2.5f' % (val, val_std, 1e-2))
     plot_roc(fpr, tpr, figure_name=png_save_path)
 
 
