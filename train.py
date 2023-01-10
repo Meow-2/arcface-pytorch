@@ -1,5 +1,6 @@
 import os
 
+import argparse
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -13,8 +14,20 @@ from utils.callback import LossHistory
 from utils.dataloader import FacenetDataset, LFWDataset, dataset_collate
 from utils.utils import get_num_classes, show_config
 from utils.utils_fit import fit_one_epoch
+from utils.utils_txt import txt_annotation
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset')
+    args = parser.parse_args()
+
+    from datetime import datetime
+    date = datetime.now()
+    month = datetime.strftime(date, '%m')
+    day = datetime.strftime(date, '%d')
+    hour = datetime.strftime(date, '%H')
+    minute = datetime.strftime(date, '%M')
+
     # -------------------------------#
     #   是否使用Cuda
     #   没有GPU可以设置成False
@@ -143,7 +156,12 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------#
     #   save_dir        权值与日志文件保存的文件夹
     # ------------------------------------------------------------------#
-    save_dir = 'logs/logs7'
+    # dataset = 'lfw_no_triplet_1'
+    dataset = args.dataset
+    txt_annotation(dataset)
+    save_dir = 'logs/'+dataset+'/' + month+'_' + day + \
+        '_' + hour + '_' + minute
+    # save_dir = 'logs/1_8_logs_with_triplet_7'
     # ------------------------------------------------------------------#
     #   用于设置是否使用多线程读取数据
     #   开启后会加快数据读取速度，但是会占用更多内存
@@ -279,19 +297,25 @@ if __name__ == "__main__":
     with open(annotation_path, "r") as f:
         lines = f.readlines()
     # 随机打乱
-    np.random.seed(10101)
-    np.random.shuffle(lines)
-    np.random.seed(None)
+    # np.random.seed(10101)
+    # np.random.shuffle(lines)
+    # np.random.seed(None)
 
     num_val = int(len(lines)*val_split)
     num_train = len(lines) - num_val
 
     # 打印所有的键值对
+    # show_config(
+    #     num_classes=num_classes, backbone=backbone, model_path=model_path, input_shape=input_shape,
+    #     Init_Epoch=Init_Epoch, Epoch=Epoch, batch_size=batch_size,
+    #     Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type=optimizer_type, momentum=momentum, lr_decay_type=lr_decay_type,
+    #     save_period=save_period, save_dir=save_dir, num_workers=num_workers, num_train=num_train, num_val=num_val
+    # )
     show_config(
         num_classes=num_classes, backbone=backbone, model_path=model_path, input_shape=input_shape,
         Init_Epoch=Init_Epoch, Epoch=Epoch, batch_size=batch_size,
         Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type=optimizer_type, momentum=momentum, lr_decay_type=lr_decay_type,
-        save_period=save_period, save_dir=save_dir, num_workers=num_workers, num_train=num_train, num_val=num_val
+        save_period=save_period, num_workers=num_workers, num_train=num_train, num_val=num_val
     )
 
     if True:
@@ -340,7 +364,7 @@ if __name__ == "__main__":
         # num_train = len(lines) - num_val
         # lines[:num_train] :num_train 是左闭右开区间
         train_dataset = FacenetDataset(
-            input_shape, lines[:num_train], random=True)
+            input_shape, lines[:num_train], random=False)
         val_dataset = FacenetDataset(
             input_shape, lines[num_train:], random=False)
 

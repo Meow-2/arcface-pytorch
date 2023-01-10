@@ -31,7 +31,8 @@ if __name__ == "__main__":
     #   训练好的权值文件
     # --------------------------------------#
     # model_path = "./logs/logs6/ep100-loss0.007-val_loss1.250.pth"
-    model_path = "./logs/logs6/ep096-loss0.007-val_loss1.227.pth"
+    # model_path = "./logs/logs6/ep096-loss0.007-val_loss1.227.pth"
+    model_path = "/home/zk/project/arcface-pytorch/logs/1_8_logs/ep003-acc0.733-val0.206.pth"
     # model_path = "./logs/logs7/ep100-loss0.008-val_loss13.744.pth"
     # model_path = "model_data/arcface_mobilefacenet.pth"
     # --------------------------------------#

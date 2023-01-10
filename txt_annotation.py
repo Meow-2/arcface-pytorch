@@ -7,7 +7,7 @@ if __name__ == "__main__":
     # ---------------------#
     #   训练集所在的路径
     # ---------------------#
-    datasets_path = "datasets/lfw_112_origin"
+    datasets_path = "datasets/1_8_lfw_112"
 
     # 列出 ./datasets 下所有的文件名(无序), 返回列表
     types_name = os.listdir(datasets_path)

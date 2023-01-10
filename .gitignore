@@ -6,6 +6,8 @@ datasets/
 Medical_Datasets/
 lfw/
 logs/
+logs*/
+cls_train.txt
 model_data/
 
 # Byte-compiled / optimized / DLL files

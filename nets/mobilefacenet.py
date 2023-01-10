@@ -1,10 +1,12 @@
 from torch import nn
 from torch.nn import BatchNorm2d, Conv2d, Module, PReLU, Sequential
 
+# Flatten 模块用于把向量拉平
 class Flatten(Module):
     def forward(self, input):
         return input.view(input.size(0), -1)
 
+# 线性层 1x1 卷积用于改变通道数
 class Linear_block(Module):
     def __init__(self, in_c, out_c, kernel=(1, 1), stride=(1, 1), padding=(0, 0), groups=1):
         super(Linear_block, self).__init__()
