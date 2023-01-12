@@ -26,12 +26,13 @@ from .utils_metrics import evaluate
 # fp16 = False, scaler = None, local_rank=0
 # save_period 每隔多少个 epoch 保存一次模型
 # save_dir log保存的文件夹
-def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, test_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank=0):
+# def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, test_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank=0):
+def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, gen, Epoch, cuda, test_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank=0):
     total_loss = 0
     total_accuracy = 0
 
-    val_total_loss = 0
-    val_total_accuracy = 0
+    # val_total_loss = 0
+    # val_total_accuracy = 0
 
     if local_rank == 0:
         print('Start Train')
@@ -91,37 +92,37 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
             pbar.update(1)
 
     # 这个在验证集上进行验证, 没有什么用
-    if local_rank == 0:
-        pbar.close()
-        print('Finish Train')
-        print('Start Validation')
-        pbar = tqdm(total=epoch_step_val,
-                    desc=f'Epoch {epoch + 1}/{Epoch}', postfix=dict, mininterval=0.3)
-    model_train.eval()
-    for iteration, batch in enumerate(gen_val):
-        if iteration >= epoch_step_val:
-            break
-        images, labels = batch
-        with torch.no_grad():
-            if cuda:
-                images = images.cuda(local_rank)
-                labels = labels.cuda(local_rank)
-
-            optimizer.zero_grad()
-            outputs = model_train(images, labels, mode="train")
-            loss = nn.NLLLoss()(F.log_softmax(outputs, -1), labels)
-
-            accuracy = torch.mean((torch.argmax(
-                F.softmax(outputs, dim=-1), dim=-1) == labels).type(torch.FloatTensor))
-
-            val_total_loss += loss.item()
-            val_total_accuracy += accuracy.item()
-
-        if local_rank == 0:
-            pbar.set_postfix(**{'total_loss': val_total_loss / (iteration + 1),
-                                'accuracy': val_total_accuracy / (iteration + 1),
-                                'lr': get_lr(optimizer)})
-            pbar.update(1)
+    # if local_rank == 0:
+    #     pbar.close()
+    #     print('Finish Train')
+    #     print('Start Validation')
+    #     pbar = tqdm(total=epoch_step_val,
+    #                 desc=f'Epoch {epoch + 1}/{Epoch}', postfix=dict, mininterval=0.3)
+    # model_train.eval()
+    # for iteration, batch in enumerate(gen_val):
+    #     if iteration >= epoch_step_val:
+    #         break
+    #     images, labels = batch
+    #     with torch.no_grad():
+    #         if cuda:
+    #             images = images.cuda(local_rank)
+    #             labels = labels.cuda(local_rank)
+    #
+    #         optimizer.zero_grad()
+    #         outputs = model_train(images, labels, mode="train")
+    #         loss = nn.NLLLoss()(F.log_softmax(outputs, -1), labels)
+    #
+    #         accuracy = torch.mean((torch.argmax(
+    #             F.softmax(outputs, dim=-1), dim=-1) == labels).type(torch.FloatTensor))
+    #
+    #         val_total_loss += loss.item()
+    #         val_total_accuracy += accuracy.item()
+    #
+    #     if local_rank == 0:
+    #         pbar.set_postfix(**{'total_loss': val_total_loss / (iteration + 1),
+    #                             'accuracy': val_total_accuracy / (iteration + 1),
+    #                             'lr': get_lr(optimizer)})
+    #         pbar.update(1)
 
     # 这个很有用
     if lfw_eval_flag:

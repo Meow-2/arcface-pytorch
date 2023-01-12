@@ -13,8 +13,11 @@ def get_epoch_acc(path):
 # lfw_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/logs6/loss_2022_12_30_03_25_32/epoch_acc.txt'
 # lfw_origin_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/logs7/loss_2022_12_30_04_37_54/epoch_acc.txt'
 
-lfw_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/1_8_logs/loss_2023_01_08_13_46_27/epoch_acc.txt'
-lfw_origin_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/logs6/loss_2022_12_30_03_25_32/epoch_acc.txt'
+# lfw_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/1_8_logs/loss_2023_01_08_13_46_27/epoch_acc.txt'
+# lfw_origin_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/logs6/loss_2022_12_30_03_25_32/epoch_acc.txt'
+lfw_1 = '/home/zk/project/arcface-pytorch/logs/lfw_triplet_1/01_10_06_16/loss_2023_01_10_06_16_59/epoch_acc.txt'
+lfw_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/lfw_triplet_1/01_10_05_07/loss_2023_01_10_05_07_35/epoch_acc.txt'
+lfw_origin_epoch_acc_path = '/home/zk/project/arcface-pytorch/logs/lfw_triplet_1/01_10_06_16/loss_2023_01_10_06_16_59/epoch_acc.txt'
 
 lfw_epoch_acc = get_epoch_acc(lfw_epoch_acc_path)
 lfw_origin_epoch_acc = get_epoch_acc(lfw_origin_epoch_acc_path)

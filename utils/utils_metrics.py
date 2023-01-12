@@ -22,6 +22,7 @@ from tqdm import tqdm
 def evaluate(distances, labels, nrof_folds=10):
     # Calculate evaluation metrics
     thresholds = np.arange(0, 4, 0.01)
+    # thresholds = np.ones(400)*0.5
     # accuracy 是一个 (10) 的数组, 带表每一折测试集划分下, 最佳阈值的测试集上的准确率
     # 划分成10折是为了计算均值和方差
 
@@ -30,6 +31,7 @@ def evaluate(distances, labels, nrof_folds=10):
                                                         labels, nrof_folds=nrof_folds)
     # Calculate evaluation metrics
     thresholds = np.arange(0, 4, 0.001)
+    # thresholds = np.ones(400)*0.5
     val, val_std, far = calculate_val(thresholds, distances,
                                       labels, 1e-2, nrof_folds=nrof_folds)
     return tpr, fpr, accuracy, val, val_std, far, best_thresholds

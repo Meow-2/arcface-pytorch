@@ -19,6 +19,7 @@ from utils.utils_txt import txt_annotation
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset')
+    parser.add_argument('--epoch')
     args = parser.parse_args()
 
     from datetime import datetime
@@ -28,6 +29,11 @@ if __name__ == "__main__":
     hour = datetime.strftime(date, '%H')
     minute = datetime.strftime(date, '%M')
 
+    seed = 4396
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
     # -------------------------------#
     #   是否使用Cuda
     #   没有GPU可以设置成False
@@ -89,6 +95,7 @@ if __name__ == "__main__":
     #   如果想要让模型从0开始训练，则设置model_path = ''，pretrain = Fasle，此时从0开始训练。
     # ----------------------------------------------------------------------------------------------------------------------------#
     model_path = "/home/zk/project/arcface-pytorch/model_data/arcface_mobilefacenet.pth"
+    # model_path = ''
     # ----------------------------------------------------------------------------------------------------------------------------#
     #   是否使用主干网络的预训练权重，此处使用的是主干的权重，因此是在模型构建的时候进行加载的。
     #   如果设置了model_path，则主干的权值无需加载，pretrained的值无意义。
@@ -121,7 +128,7 @@ if __name__ == "__main__":
     #   batch_size      每次输入的图片数量
     # ------------------------------------------------------#
     Init_Epoch = 0
-    Epoch = 100
+    Epoch = int(args.epoch)
     batch_size = 64
 
     # ------------------------------------------------------------------#
@@ -175,9 +182,13 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------#
     #   LFW评估数据集的文件路径和对应的txt文件
     # ------------------------------------------------------------------#
-    lfw_dir_path = "datasets/SCface/sc2_6"
-    lfw_pairs_path = "model_data/SCface_pair.txt"
+    # lfw_dir_path = "datasets/SCface/sc2_6"
+    # lfw_pairs_path = "model_data/SCface_pair.txt"
 
+    # lfw_dir_path = "datasets/lfw_96_112"
+    # lfw_pairs_path = "model_data/lfw_pair.txt"
+    lfw_dir_path = "datasets/lfw_SCface_test"
+    lfw_pairs_path = "datasets/lfw_SCface_test_pair.txt"
     # ------------------------------------------------------#
     #   设置用到的显卡
     # ------------------------------------------------------#
@@ -292,7 +303,7 @@ if __name__ == "__main__":
     #   0.01用于验证，0.99用于训练
     # -------------------------------------------------------#
     # 可以考虑设成 0
-    val_split = 0.01
+    # val_split = 0.01
     # 读入 cls_train.txt
     with open(annotation_path, "r") as f:
         lines = f.readlines()
@@ -301,8 +312,9 @@ if __name__ == "__main__":
     # np.random.shuffle(lines)
     # np.random.seed(None)
 
-    num_val = int(len(lines)*val_split)
-    num_train = len(lines) - num_val
+    # num_val = int(len(lines)*val_split)
+    # num_train = len(lines) - num_val
+    num_train = len(lines)
 
     # 打印所有的键值对
     # show_config(
@@ -315,7 +327,7 @@ if __name__ == "__main__":
         num_classes=num_classes, backbone=backbone, model_path=model_path, input_shape=input_shape,
         Init_Epoch=Init_Epoch, Epoch=Epoch, batch_size=batch_size,
         Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type=optimizer_type, momentum=momentum, lr_decay_type=lr_decay_type,
-        save_period=save_period, num_workers=num_workers, num_train=num_train, num_val=num_val
+        save_period=save_period, num_workers=num_workers, num_train=num_train
     )
 
     if True:
@@ -351,10 +363,12 @@ if __name__ == "__main__":
         #   判断每一个世代的长度
         # ---------------------------------------#
         epoch_step = num_train // batch_size  # 整数除法, 返回商的整数部分
-        epoch_step_val = num_val // batch_size  # 整数除法, 返回商的整数部分
+        # epoch_step_val = num_val // batch_size  # 整数除法, 返回商的整数部分
 
         # 至少有一个 batch_size 张图片
-        if epoch_step == 0 or epoch_step_val == 0:
+        # if epoch_step == 0 or epoch_step_val == 0:
+        #     raise ValueError("数据集过小，无法继续进行训练，请扩充数据集。")
+        if epoch_step == 0:
             raise ValueError("数据集过小，无法继续进行训练，请扩充数据集。")
 
         # ---------------------------------------#
@@ -365,14 +379,14 @@ if __name__ == "__main__":
         # lines[:num_train] :num_train 是左闭右开区间
         train_dataset = FacenetDataset(
             input_shape, lines[:num_train], random=False)
-        val_dataset = FacenetDataset(
-            input_shape, lines[num_train:], random=False)
+        # val_dataset = FacenetDataset(
+        #     input_shape, lines[num_train:], random=False)
 
         if distributed:
             train_sampler = torch.utils.data.distributed.DistributedSampler(
                 train_dataset, shuffle=True,)
-            val_sampler = torch.utils.data.distributed.DistributedSampler(
-                val_dataset, shuffle=False,)
+            # val_sampler = torch.utils.data.distributed.DistributedSampler(
+            #     val_dataset, shuffle=False,)
             batch_size = batch_size // ngpus_per_node
             shuffle = False
         else:
@@ -393,8 +407,8 @@ if __name__ == "__main__":
         # sampler = None
         gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
                          drop_last=True, collate_fn=dataset_collate, sampler=train_sampler)
-        gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
-                             drop_last=True, collate_fn=dataset_collate, sampler=val_sampler)
+        # gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
+        #                      drop_last=True, collate_fn=dataset_collate, sampler=val_sampler)
 
         for epoch in range(Init_Epoch, Epoch):
             if distributed:
@@ -404,8 +418,8 @@ if __name__ == "__main__":
             set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
 
             # 跑一个 epoch
-            fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen,
-                          gen_val, Epoch, Cuda, LFW_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank)
+            fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step,  gen,
+                          Epoch, Cuda, LFW_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank)
 
         if local_rank == 0:
             loss_history.writer.close()
