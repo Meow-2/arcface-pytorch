@@ -27,7 +27,7 @@ from .utils_metrics import evaluate
 # save_period 每隔多少个 epoch 保存一次模型
 # save_dir log保存的文件夹
 # def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, test_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank=0):
-def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, gen, Epoch, cuda, test_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank=0):
+def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, gen, Epoch, cuda, test_loader, rank_loader, lfw_eval_flag, eval_rank, fp16, scaler, save_period, save_dir, local_rank=0):
     total_loss = 0
     total_accuracy = 0
 
@@ -124,7 +124,51 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
     #                             'lr': get_lr(optimizer)})
     #         pbar.update(1)
 
-    # 这个很有用
+    if eval_rank:
+        print("开始进行rank1、rank5的验证")
+        # rank_loader
+        with torch.no_grad():
+            model_train.eval()
+            all_query, all_origin = None, None
+            for _, (query, origin) in enumerate(rank_loader):
+                query, origin = query.type(
+                    torch.FloatTensor), origin.type(torch.FloatTensor)
+                if cuda:
+                    query, origin = query.cuda(
+                        local_rank), origin.cuda(local_rank)
+                out_a, out_p = model_train(query), model_train(origin)
+                if all_query is None:
+                    all_query = out_a
+                    all_origin = out_p
+                else:
+                    all_query = torch.cat((all_query, out_a))
+                    all_origin = torch.cat((all_origin, out_p))
+            # print("all_query:", all_query.shape)
+            # print("all_origin:", all_origin.shape)
+            person_num = all_query.shape[0]
+            ranks = np.zeros(10)
+            print(ranks.shape)
+            for index, query in enumerate(all_query):
+                # shape: (128,1)
+                query = query.view(-1, 1)
+                # (120,128) X (128,1)
+                score = torch.mm(all_origin, query)
+                # 删除 score 中维度为 1 的那一维, (120)
+                score = score.squeeze(1).cpu().numpy()
+                # from large to small
+                origin_index = np.argsort(score)
+                origin_index = origin_index[::-1]
+                # 找到对应的 index 排第几
+                rank = np.argwhere(origin_index == index)
+                rank = rank.item()
+                if rank < 10:
+                    ranks[rank:] += 1
+            ranks /= person_num
+            print('Rank1: %f Rank5: %f Rank10: %f ' %
+                  (ranks[0], ranks[4], ranks[9]))
+
+        # print("rank10:", rank_dict["rank10"]/person_num)
+        # 这个很有用
     if lfw_eval_flag:
         print("开始进行LFW数据集的验证。")
         labels, distances = [], []
@@ -173,9 +217,19 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
         # if (epoch + 1) % save_period == 0 or epoch + 1 == Epoch:
         #     torch.save(model.state_dict(), os.path.join(save_dir, 'ep%03d-loss%.3f-val_loss%.3f.pth' %
         #                ((epoch+1), total_loss / epoch_step, val_total_loss / epoch_step_val)))
-        loss_history.append_loss(epoch, np.mean(accuracy) if lfw_eval_flag else total_accuracy /
-                                 epoch_step, total_loss / epoch_step, val)
-        # print('Total Loss: %.4f' % (total_loss / epoch_step))
+        # loss_history.append_loss(epoch, np.mean(accuracy) if lfw_eval_flag else total_accuracy /
+        #                          epoch_step, total_loss / epoch_step, val)
+        if lfw_eval_flag:
+            loss_history.append_loss(epoch, np.mean(accuracy) if lfw_eval_flag else total_accuracy /
+                                     epoch_step, total_loss / epoch_step, val)
+        if eval_rank:
+            loss_history.append_loss(
+                epoch, ranks[0], total_loss / epoch_step, ranks[4])
+            # print('Total Loss: %.4f' % (total_loss / epoch_step))
         if (epoch + 1) % save_period == 0 or epoch + 1 == Epoch:
-            torch.save(model.state_dict(), os.path.join(save_dir, 'ep%03d-acc%.3f-val%.3f.pth' %
-                       ((epoch+1), np.mean(accuracy), val)))
+            if lfw_eval_flag:
+                torch.save(model.state_dict(), os.path.join(save_dir, 'ep%03d-acc%.3f-val%.3f.pth' %
+                                                            ((epoch+1), np.mean(accuracy), val)))
+            if eval_rank:
+                torch.save(model.state_dict(), os.path.join(save_dir, 'ep%03d-acc%.3f-val%.3f.pth' %
+                                                            ((epoch+1), ranks[0], ranks[4])))

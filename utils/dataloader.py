@@ -142,3 +142,48 @@ class LFWDataset(datasets.ImageFolder):
     # 返回测试集长度
     def __len__(self):
         return len(self.validation_images)
+
+
+# 返回两张图片的tenosr就可以了, 不需要标签
+class SCfaceDataset(datasets.ImageFolder):
+    def __init__(self, dir, image_size, transform=None):
+        super(SCfaceDataset, self).__init__(dir, transform)
+        self.image_size = image_size
+        self.dataset_path = dir
+        persons = os.listdir(dir)
+        persons.sort(key=int)
+        self.pairs_list = []
+        nrof_skipped_pairs = 0
+        for i in range(len(persons)):
+            query_path = os.path.join(
+                self.dataset_path, persons[i], persons[i]+"_0002.jpg")
+            origin_path = os.path.join(
+                self.dataset_path, persons[i], persons[i]+"_0001.jpg")
+            if os.path.exists(query_path) and os.path.exists(origin_path):
+                self.pairs_list.append((query_path, origin_path))
+            else:
+                nrof_skipped_pairs += 1
+        # 记录路径不存在的 pairs 数量
+        if nrof_skipped_pairs > 0:
+            print('Skipped %d image pairs' % nrof_skipped_pairs)
+        self.length = len(self.pairs_list)
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, index):
+        (query_path, origin_path) = self.pairs_list[index]
+        image1, image2 = Image.open(query_path), Image.open(origin_path)
+
+        image1 = resize_image(
+            # 要 resize 成的大小是一个列表
+            image1, [self.image_size[1], self.image_size[0]], letterbox_image=True)
+        image2 = resize_image(
+            image2, [self.image_size[1], self.image_size[0]], letterbox_image=True)
+
+        # preprocess_input() 用来将图像的像素值归一化到 [-1,1] 之间
+        # np.transpose() 用来对数组进行转置, 可以用来交换数组的轴
+        # 比如这里将通道放在了最前面, 为了遵循 B C H W, PIL.Image.open 打开的图像是 H W C 的形式
+        image1, image2 = np.transpose(preprocess_input(np.array(image1, np.float32)), [
+                                      2, 0, 1]), np.transpose(preprocess_input(np.array(image2, np.float32)), [2, 0, 1])
+        return image1, image2

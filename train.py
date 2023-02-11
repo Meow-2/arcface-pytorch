@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from nets.arcface import Arcface
 from nets.arcface_training import get_lr_scheduler, set_optimizer_lr
 from utils.callback import LossHistory
-from utils.dataloader import FacenetDataset, LFWDataset, dataset_collate
+from utils.dataloader import FacenetDataset, LFWDataset, SCfaceDataset, dataset_collate
 from utils.utils import get_num_classes, show_config
 from utils.utils_fit import fit_one_epoch
 from utils.utils_txt import txt_annotation
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset')
     parser.add_argument('--epoch')
+    parser.add_argument('--model', type=str, default="")
     args = parser.parse_args()
 
     from datetime import datetime
@@ -94,8 +95,9 @@ if __name__ == "__main__":
     #   如果想要让模型从主干的预训练权值开始训练，则设置model_path = ''，pretrain = True，此时仅加载主干。
     #   如果想要让模型从0开始训练，则设置model_path = ''，pretrain = Fasle，此时从0开始训练。
     # ----------------------------------------------------------------------------------------------------------------------------#
-    model_path = "/home/zk/project/arcface-pytorch/model_data/arcface_mobilefacenet.pth"
+    # model_path = "/home/zk/project/arcface-pytorch/model_data/arcface_mobilefacenet.pth"
     # model_path = ''
+    model_path = args.model
     # ----------------------------------------------------------------------------------------------------------------------------#
     #   是否使用主干网络的预训练权重，此处使用的是主干的权重，因此是在模型构建的时候进行加载的。
     #   如果设置了model_path，则主干的权值无需加载，pretrained的值无意义。
@@ -178,7 +180,10 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------#
     #   是否开启LFW评估
     # ------------------------------------------------------------------#
-    lfw_eval_flag = True
+    eval_rank = True
+    lfw_eval_flag = False
+    # rank_dir_path = "datasets/SCface/sc2_6"
+    rank_dir_path = "datasets/lfw_SCface_test"
     # ------------------------------------------------------------------#
     #   LFW评估数据集的文件路径和对应的txt文件
     # ------------------------------------------------------------------#
@@ -298,6 +303,8 @@ if __name__ == "__main__":
     # drop_last = False
     LFW_loader = torch.utils.data.DataLoader(
         LFWDataset(dir=lfw_dir_path, pairs_path=lfw_pairs_path, image_size=input_shape), batch_size=32, shuffle=False) if lfw_eval_flag else None
+    RANK_loader = torch.utils.data.DataLoader(
+        SCfaceDataset(dir=rank_dir_path, image_size=input_shape), batch_size=130, shuffle=False)
 
     # -------------------------------------------------------#
     #   0.01用于验证，0.99用于训练
@@ -324,7 +331,7 @@ if __name__ == "__main__":
     #     save_period=save_period, save_dir=save_dir, num_workers=num_workers, num_train=num_train, num_val=num_val
     # )
     show_config(
-        num_classes=num_classes, backbone=backbone, model_path=model_path, input_shape=input_shape,
+        num_classes=num_classes, backbone=backbone, input_shape=input_shape,
         Init_Epoch=Init_Epoch, Epoch=Epoch, batch_size=batch_size,
         Init_lr=Init_lr, Min_lr=Min_lr, optimizer_type=optimizer_type, momentum=momentum, lr_decay_type=lr_decay_type,
         save_period=save_period, num_workers=num_workers, num_train=num_train
@@ -419,7 +426,7 @@ if __name__ == "__main__":
 
             # 跑一个 epoch
             fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step,  gen,
-                          Epoch, Cuda, LFW_loader, lfw_eval_flag, fp16, scaler, save_period, save_dir, local_rank)
+                          Epoch, Cuda, LFW_loader, RANK_loader, lfw_eval_flag, eval_rank, fp16, scaler, save_period, save_dir, local_rank)
 
         if local_rank == 0:
             loss_history.writer.close()

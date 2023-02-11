@@ -11,7 +11,7 @@ def get_acc(path):
     return acc
 
 
-root_path = '/home/zk/project/arcface-pytorch/logs/lfw2_no_triplet/'
+root_path = '/home/zk/project/arcface-pytorch/logs/lfw2_origin/rank15/'
 data_path = root_path
 isFinetuning = root_path.find('Finetuning')
 dataset_name = ""
@@ -33,7 +33,8 @@ for i in path_list:
         current_file = os.path.join(current_path, j)
         if os.path.isdir(current_file):
             subdir_path = current_file
-    acc_paths.append(os.path.join(subdir_path, "epoch_acc.txt"))
+    # acc_paths.append(os.path.join(subdir_path, "epoch_acc.txt"))
+    acc_paths.append(os.path.join(subdir_path, "epoch_val_rate.txt"))
 
 # acc_paths = []
 # acc_paths.append("/home/zk/01_11_01_33/loss_2023_01_11_01_33_56/epoch_acc.txt")
@@ -51,8 +52,8 @@ for acc_name, acc_path in zip(path_list, acc_paths):
     X = range(epoch_num)
     plt.plot(X, acc_list,  linewidth=1, label=acc_name)
 
-origin_acc = [0.65]*epoch_num
-plt.plot(X, origin_acc,  linewidth=1, label="origin")
+# origin_acc = [0.65]*epoch_num
+# plt.plot(X, origin_acc,  linewidth=1, label="origin")
 
 plt.grid(True)
 plt.xlabel('Epoch')
